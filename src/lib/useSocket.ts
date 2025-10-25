@@ -1,10 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { createSocket } from './socket';
 import type { NotificationData, NotificationService } from './notificationService';
 
 export const useSocket = (notifService: NotificationService, token: string) => {
     const [socket, setSocket] = useState<ReturnType<typeof createSocket> | null>(null);
     const [isConnected, setIsConnected] = useState(false);
+    const notifServiceRef = useRef(notifService);
+
+    // Actualizar la ref cuando cambia el servicio
+    useEffect(() => {
+        notifServiceRef.current = notifService;
+    }, [notifService]);
 
     useEffect(() => {
         if (!token) {
@@ -17,7 +23,7 @@ export const useSocket = (notifService: NotificationService, token: string) => {
         newSocket.on('disconnect', () => setIsConnected(false));
         newSocket.on('connect_error', (error: Error) => console.error(error.message));
         newSocket.on('notification', (data: NotificationData) => {
-            notifService.notify(data);
+            notifServiceRef.current.notify(data);
         });
 
         setSocket(newSocket);
@@ -25,7 +31,7 @@ export const useSocket = (notifService: NotificationService, token: string) => {
         return () => {
             newSocket.disconnect();
         };
-    }, [notifService]);
+    }, [token]); // Solo depende de token
 
     return { socket, isConnected };
 };
